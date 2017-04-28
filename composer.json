@@ -1,6 +1,12 @@
 
 {
     "name": "bamboohr/twigify",
+    "license": "Apache-2.0",
+    "authors": [
+      {
+        "name": "Jon Gardiner"
+      }
+    ],
     "bin": [ "bin/twigify.php" ],
     "require": {
         "nikic/php-parser" : "2.0.01"
