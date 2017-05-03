@@ -9,7 +9,7 @@
     ],
     "bin": [ "bin/twigify.php" ],
     "require": {
-        "nikic/php-parser" : "2.0.01"
+        "nikic/php-parser" : "^2.0"
     },
     "autoload": {
       "psr-4": {"BambooHR\\Twigify\\": "lib" }
