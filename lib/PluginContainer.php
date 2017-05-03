@@ -15,7 +15,7 @@ class PluginContainer
 	private $plugins = [];
 
 	function init() {
-		$path=$_ENV['HOME'];
+		$path=getenv('HOME');
 		if (!empty($path)) {
 			$configPath = $path . DIRECTORY_SEPARATOR . ".twigify-plugins";
 			echo "Plugin path: $configPath\n";

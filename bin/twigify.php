@@ -45,10 +45,8 @@ $traverser = new \PhpParser\NodeTraverser();
 $traverser->addVisitor( new SwitchToIfConverter() );
 $plugins->register($traverser);
 
-$statements = $traverser->traverse($statements);
-
-
 try {
+	$statements = $traverser->traverse($statements);
 	echo $converter->prettyPrint( $statements );
 }  
 catch(ConvertException $e) {
