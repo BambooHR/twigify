@@ -16,15 +16,29 @@ use PhpParser\Node\Expr\BinaryOp;
 use PhpParser\Node\Expr\Cast;
 use PhpParser\Node\Stmt;
 use PhpParser\Node\Name;
-use BambooHR\Twigify\Exceptions\ConvertException;
 
 
 class Converter extends \PhpParser\PrettyPrinter\Standard {
-	protected function abort($message, Node $node) {
-		throw new ConvertException(get_class($node).": $message on line ".$node->getLine());
-	}
-    // Names
 
+	private $errors = [];
+	protected $indenter;
+
+	public function __construct(array $options = []) {
+		parent::__construct($options);
+		$this->indenter=new Indenter();
+	}
+
+
+	protected function error($message, Node $node) {
+		$this->errors[]= get_class($node).": $message on line ".$node->getLine();
+	}
+
+	function getErrors() {
+		return $this->errors;
+
+	}
+
+    // Names
     public function pName(Name $node) {
         return implode('\\', $node->parts);
     }
@@ -98,69 +112,26 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
     // Assignments
 
     public function pExpr_Assign(Expr\Assign $node) {
-        return "{% set ".$this->pInfixOp('Expr_Assign', $node->var, ' = ', $node->expr)." %}";
+		$this->indenter->statement("set ".$this->pInfixOp('Expr_Assign', $node->var, ' = ', $node->expr));
     }
 
     public function pExpr_AssignRef(Expr\AssignRef $node) {
         return $this->pInfixOp('Expr_AssignRef', $node->var, ' = ', $node->expr);
     }
 
-    public function pExpr_AssignOp_Plus(AssignOp\Plus $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Plus', $node->var, ' += ', $node->expr);
+	public function __call($name, $arguments) {
+		echo "$name";
+		print_r($arguments);
+		$this->error("Not supported: $name", $arguments[0]);
+	}
+
+	public function pExpr_AssignOp_Concat(AssignOp\Concat $node) {
+		$this->indenter->statement("set ".$this->p($node->var)."  = (".$this->pInfixOp('Expr_BinaryOp_Concat', $node->var, ' ~ ', $node->expr).")");
     }
 
-    public function pExpr_AssignOp_Minus(AssignOp\Minus $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Minus', $node->var, ' -= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_Mul(AssignOp\Mul $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Mul', $node->var, ' *= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_Div(AssignOp\Div $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Div', $node->var, ' /= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_Concat(AssignOp\Concat $node) {
-        return "{% set ".$this->p($node->var)."  = (".$this->pInfixOp('Expr_BinaryOp_Concat', $node->var, ' ~ ', $node->expr).") %}";
-    }
-
-    public function pExpr_AssignOp_Mod(AssignOp\Mod $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Mod', $node->var, ' %= ', $node->expr);
-    }
-
-    public function epExpr_AssignOp_BitwiseAnd(AssignOp\BitwiseAnd $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_BitwiseAnd', $node->var, ' &= ', $node->expr);
-    }
 
     public function pExpr_AssignOp_BitwiseOr(AssignOp\BitwiseOr $node) {	
-        return "{% set ".$this->p($node->var)."=".$this->pInfixOp('Expr_BinaryOp_BitwiseOr', $node->var, ' b-or ', $node->expr) ."%}";
-    }
-
-    public function pExpr_AssignOp_BitwiseXor(AssignOp\BitwiseXor $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_BitwiseXor', $node->var, ' ^= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_ShiftLeft(AssignOp\ShiftLeft $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_ShiftLeft', $node->var, ' <<= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_ShiftRight(AssignOp\ShiftRight $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_ShiftRight', $node->var, ' >>= ', $node->expr);
-    }
-
-    public function pExpr_AssignOp_Pow(AssignOp\Pow $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_AssignOp_Pow', $node->var, ' **= ', $node->expr);
+        $this->indenter->statement("set ".$this->p($node->var)."=".$this->pInfixOp('Expr_BinaryOp_BitwiseOr', $node->var, ' b-or ', $node->expr));
     }
 
     // Binary expressions
@@ -209,16 +180,6 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return $this->pInfixOp('Expr_BinaryOp_BitwiseXor', $node->left, ' b-xor ', $node->right);
     }
 
-    public function pExpr_BinaryOp_ShiftLeft(BinaryOp\ShiftLeft $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_BinaryOp_ShiftLeft', $node->left, ' << ', $node->right);
-    }
-
-    public function pExpr_BinaryOp_ShiftRight(BinaryOp\ShiftRight $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_BinaryOp_ShiftRight', $node->left, ' >> ', $node->right);
-    }
-
     public function pExpr_BinaryOp_Pow(BinaryOp\Pow $node) {
         return $this->pInfixOp('Expr_BinaryOp_Pow', $node->left, ' ** ', $node->right);
     }
@@ -251,11 +212,6 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return $this->pInfixOp('Expr_BinaryOp_NotIdentical', $node->left, ' not sameas ', $node->right);
     }
 
-    public function pExpr_BinaryOp_Spaceship(BinaryOp\Spaceship $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_BinaryOp_Spaceship', $node->left, ' <=> ', $node->right);
-    }
-
     public function pExpr_BinaryOp_Greater(BinaryOp\Greater $node) {
         return $this->pInfixOp('Expr_BinaryOp_Greater', $node->left, ' > ', $node->right);
     }
@@ -272,26 +228,12 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return $this->pInfixOp('Expr_BinaryOp_SmallerOrEqual', $node->left, ' <= ', $node->right);
     }
 
-    public function pExpr_BinaryOp_Coalesce(BinaryOp\Coalesce $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_BinaryOp_Coalesce', $node->left, ' ?? ', $node->right);
-    }
-
-    public function pExpr_Instanceof(Expr\Instanceof_ $node) {
-		$this->abort("No support", $node);
-        return $this->pInfixOp('Expr_Instanceof', $node->expr, ' instanceof ', $node->class);
-    }
-
     // Unary expressions
 
     public function pExpr_BooleanNot(Expr\BooleanNot $node) {
         return $this->pPrefixOp('Expr_BooleanNot', ' not ', $node->expr);
     }
 
-    public function pExpr_BitwiseNot(Expr\BitwiseNot $node) {
-		$this->abort("No support", $node);
-        return $this->pPrefixOp('Expr_BitwiseNot', '~', $node->expr);
-    }
 
     public function pExpr_UnaryMinus(Expr\UnaryMinus $node) {
         return $this->pPrefixOp('Expr_UnaryMinus', '-', $node->expr);
@@ -301,75 +243,38 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return $this->pPrefixOp('Expr_UnaryPlus', '+', $node->expr);
     }
 
-    public function pExpr_PreInc(Expr\PreInc $node) {
-		$this->abort("No support", $node);
-        return $this->pPrefixOp('Expr_PreInc', '++', $node->var);
-    }
-
-    public function pExpr_PreDec(Expr\PreDec $node) {
-		$this->abort("No support", $node);
-        return $this->pPrefixOp('Expr_PreDec', '--', $node->var);
-    }
-
-    public function pExpr_PostInc(Expr\PostInc $node) {
-		$this->abort("No support", $node);
-        return $this->pPostfixOp('Expr_PostInc', $node->var, '++');
-    }
-
-    public function pExpr_PostDec(Expr\PostDec $node) {
-		$this->abort("No support", $node);
-        return $this->pPostfixOp('Expr_PostDec', $node->var, '--');
-    }
-
     public function pExpr_ErrorSuppress(Expr\ErrorSuppress $node) {
-        return $this->pPrefixOp('Expr_ErrorSuppress', '@', $node->expr);
-    }
-
-    public function pExpr_YieldFrom(Expr\YieldFrom $node) {
-		$this->abort("No support", $node);
-        return $this->pPrefixOp('Expr_YieldFrom', 'yield from ', $node->expr);
-    }
-
-    public function pExpr_Print(Expr\Print_ $node) {
-		$this->abort("No support", $node);
-        return $this->pPrefixOp('Expr_Print', 'print ', $node->expr);
+        return $this->pPrefixOp('Expr_ErrorSuppress', '', $node->expr);
     }
 
     // Casts
 
     public function pExpr_Cast_Int(Cast\Int_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Int', '(int) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_Double(Cast\Double $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Double', '(double) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_String(Cast\String_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_String', '(string) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_Array(Cast\Array_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Array', '(array) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_Object(Cast\Object_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Object', '(object) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_Bool(Cast\Bool_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Bool', '(bool) ', $node->expr);
+		return $this->p( $node->expr );
     }
 
     public function pExpr_Cast_Unset(Cast\Unset_ $node) {
-		return "";
-        return $this->pPrefixOp('Expr_Cast_Unset', '(unset) ', $node->expr);
+        return $this->p( $node->expr );
     }
 
     // Function calls and similar constructs
@@ -429,7 +334,9 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 			return "(".$this->p($node->args[0]).") | format(".$this->pCommaSeparated(array_slice($node->args,1)).")";
 		}
 		if($node->name=='printf') {
-			return "{{ (".$this->p($node->args[0]).") | format(".$this->pCommaSeparated(array_slice($node->args,1)).") }}";
+			$this->indenter->statement(
+				"(".$this->p($node->args[0]).") | format(".$this->pCommaSeparated(array_slice($node->args,1)).")"
+			);
 		}
 		if($node->name=='str_replace') {
 			return "(".$this->p($node->args[2])."| replace(".$this->p($node->args[0]).",".$this->p($node->args[1])."))";
@@ -458,9 +365,6 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
              . '(' . $this->pCommaSeparated($node->args) . ')';
     }
 
-    public function pExpr_StaticCall(Expr\StaticCall $node) {
-		$this->abort("No support", $node);
-    }
 
     public function pExpr_Empty(Expr\Empty_ $node) {
         return '(' . $this->p($node->expr) . ' is empty)';
@@ -470,17 +374,12 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return '(' . $this->pCommaSeparated($node->vars) . ' is defined)';
     }
 
-    public function pExpr_Eval(Expr\Eval_ $node) {
-		$this->abort("No support", $node);
-        return 'eval(' . $this->p($node->expr) . ')';
-    }
-
     public function pExpr_Include(Expr\Include_ $node) {
 		$value = $node->expr;
 		if($value instanceof Scalar\String_) {
 			$value->value = preg_replace('/\.php$/', '.html.twig', $value->value);
 		}
-		return "{% include ".$this->p($value)." %}";
+		return $this->indenter->statement("include ".$this->p($value));
     }
 
     public function pExpr_List(Expr\List_ $node) {
@@ -493,7 +392,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 				if($var instanceof Expr\Variable) {
 					$pList[] = $this->p($var);
 				} else {
-					$this->abort("No support", $node);
+					$this->error("No support", $node);
 				}
             }
         }
@@ -505,7 +404,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 
     public function pExpr_Variable(Expr\Variable $node) {
         if ($node->name instanceof Expr) {
-			$this->abort("No support", $node);
+			$this->error("No support", $node);
         } else {
             return $node->name;
         }
@@ -534,7 +433,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
     }
 
     public function pExpr_ConstFetch(Expr\ConstFetch $node) {
-		if(strcasecmp($node->name,'false')==0 || strcasecmp($node->name,'true')==0 || strcasecmp($name->name,'null')==0) {
+		if(strcasecmp($node->name,'false')==0 || strcasecmp($node->name,'true')==0 || strcasecmp($node->name,'null')==0) {
 			return strval($node->name);
 		} else {
 			return "constant(\"" . $this->p($node->name) . "\")";
@@ -549,44 +448,6 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return $this->pDereferenceLhs($node->var) . '.' . $this->pObjectProperty($node->name);
     }
 
-    public function pExpr_StaticPropertyFetch(Expr\StaticPropertyFetch $node) {
-		$this->abort("No support", $node);
-        return $this->pDereferenceLhs($node->class) . '::$' . $this->pObjectProperty($node->name);
-    }
-
-    public function pExpr_ShellExec(Expr\ShellExec $node) {
-		$this->abort("No support", $node);
-        return '`' . $this->pEncapsList($node->parts, '`') . '`';
-    }
-
-    public function pExpr_Closure(Expr\Closure $node) {
-		$this->abort("No support", $node);
-        return ($node->static ? 'static ' : '')
-             . 'function ' . ($node->byRef ? '&' : '')
-             . '(' . $this->pCommaSeparated($node->params) . ')'
-             . (!empty($node->uses) ? ' use(' . $this->pCommaSeparated($node->uses) . ')': '')
-             . (null !== $node->returnType ? ' : ' . $this->pType($node->returnType) : '')
-             . ' {' . $this->pStmts($node->stmts) . "\n" . '}';
-    }
-
-    public function pExpr_ClosureUse(Expr\ClosureUse $node) {
-		$this->abort("No support", $node);
-        return ($node->byRef ? '&' : '') . '$' . $node->var;
-    }
-
-    public function pExpr_New(Expr\New_ $node) {
-		$this->abort("No support", $node);
-        if ($node->class instanceof Stmt\Class_) {
-            $args = $node->args ? '(' . $this->pCommaSeparated($node->args) . ')' : '';
-            return 'new ' . $this->pClassCommon($node->class, $args);
-        }
-        return 'new ' . $this->p($node->class) . '(' . $this->pCommaSeparated($node->args) . ')';
-    }
-
-    public function pExpr_Clone(Expr\Clone_ $node) {
-		$this->abort("No support", $node);
-        return 'clone ' . $this->p($node->expr);
-    }
 
     public function pExpr_Ternary(Expr\Ternary $node) {
         // a bit of cheating: we treat the ternary as a binary op where the ?...: part is the operator.
@@ -596,13 +457,6 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         );
     }
 
-    public function pExpr_Exit(Expr\Exit_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pExpr_Yield(Expr\Yield_ $node) {
-		$this->abort("No support", $node);
-    }
 
     // Declarations
 
@@ -618,56 +472,10 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 		return "";
     }
 
-    public function pStmt_UseUse(Stmt\UseUse $node) {
-		$this->abort("No support", $node);
-    }
 
-    private function pUseType($type) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_Interface(Stmt\Interface_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Class(Stmt\Class_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Trait(Stmt\Trait_ $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_TraitUse(Stmt\TraitUse $node) {
-       $this->abort("No support", $node);
-    }
-
-    public function pStmt_TraitUseAdaptation_Precedence(Stmt\TraitUseAdaptation\Precedence $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_TraitUseAdaptation_Alias(Stmt\TraitUseAdaptation\Alias $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_Property(Stmt\Property $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_PropertyProperty(Stmt\PropertyProperty $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_ClassMethod(Stmt\ClassMethod $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_ClassConst(Stmt\ClassConst $node) {
-        $this->abort("No support", $node);
-    }
 
     public function pStmt_Function(Stmt\Function_ $node) {
-		$ret="\n{% macro ".$node->name."(";
+		$ret="macro ".$node->name."(";
 		foreach($node->params as $index=>$param) {
 			if($index>0) $ret.=",";
 			/** @var Node\Param $param */
@@ -676,41 +484,43 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 				$ret.=$this->p($param->default);
 			}
 		}
-		$ret.=") %}";
-		$ret.="\n".$this->pStmts($node->stmts);
-		$ret.="\n{% endmacro %}\n";
+		$ret.=")";
+		$this->indenter->statement($ret);
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
+		$this->indenter->statement("endmacro");
         return $ret;
-    }
-
-    public function pStmt_Const(Stmt\Const_ $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_Declare(Stmt\Declare_ $node) {
-        $this->abort("No support", $node);
-    }
-
-    public function pStmt_DeclareDeclare(Stmt\DeclareDeclare $node) {
-		$this->abort("No support", $node);
     }
 
     // Control flow
 
     public function pStmt_If(Stmt\If_ $node) {
-        return '{% if ' . $this->p($node->cond) . ' %}'
-             . $this->pStmts($node->stmts) 
-             . $this->pImplode($node->elseifs)
-             . (null !== $node->else ? $this->p($node->else) : '')
-			 . "{% endif %}";
+		$this->indenter->statement("if " . $this->p($node->cond));
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
+		foreach($node->elseifs as $stmt) {
+			$this->p($stmt);
+		}
+		if($node->else) {
+			$this->p($node->else);
+		}
+		$this->indenter->statement("endif");
     }
 
     public function pStmt_ElseIf(Stmt\ElseIf_ $node) {
-        return ' {% elseif ' . $this->p($node->cond) . ') %}'
-             . $this->pStmts($node->stmts);
+		$this->indenter->statement('elseif ' . $this->p($node->cond) . ')' );
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
     }
 
     public function pStmt_Else(Stmt\Else_ $node) {
-        return '{% else %}' . $this->pStmts($node->stmts);
+		$this->indenter->statement("else");
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
     }
 
 	private function getForMax(Stmt\For_ $node) {
@@ -734,22 +544,22 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 		$op2 = $node->loop[0];
 		if ($op2 instanceof Expr\PostInc || $op2 instanceof Expr\PreInc) {
 			if($op2->var->name!=$name) {
-				$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+				$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 			}
 			$step = 1;
 		} else if ($op2 instanceof Expr\PostDec || $op2 instanceof Expr\PreDec) {
 			if($op2->var->name!=$name) {
-				$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+				$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 			}
 			$step = -1;
-		} else if ($op2 instanceof PhpParser\Node\Expr\AssignOp\Plus) {
+		} else if ($op2 instanceof \PhpParser\Node\Expr\AssignOp\Plus) {
 			if($op2->var->name!=$name) {
-				$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+				$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 			}
 			$step = $this->p($op2->expr);
-		} else if ($op2 instanceof PhpParser\Node\Expr\AssignOp\Minus) {
+		} else if ($op2 instanceof \PhpParser\Node\Expr\AssignOp\Minus) {
 			if($op2->var->name!=$name) {
-				$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+				$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 			}
 			$step = "-" . $this->p($op2->expr);
 		} else {
@@ -773,12 +583,12 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 				($node->cond[0] instanceof BinaryOp && $node->cond[0]->left instanceof Expr\Variable)
 			)
 		) {
-			$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+			$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 		}
 
 		$name = $node->init[0]->var->name;
 		if($name!= $node->cond[0]->left->name) {
-			$this->abort("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
+			$this->error("For loop only supports the pattern: for(\$i=#; \$i {op} #; \$i+=#) ;", $node);
 		}
 		if($node->init[0])
 
@@ -787,134 +597,56 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 		$max = $this->getForMax($node);
 		$step = $this->getForStep($name, $node);
 
-
-		return "{% for $loopCounter in range($min, $max, $step) %}".$this->pStmts($node->stmts)."{% endfor %}";
+		$this->indenter->statement("for $loopCounter in range($min, $max, $step)");
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
+		$this->indenter->statement("endfor");
     }
 	
 	protected function pStmts(array $nodes, $indent = true) {
-        $result = '';
         foreach ($nodes as $node) {
-            $result .= $this->pComments($node->getAttribute('comments', array()));
-			if ($result instanceof Expr) {
-				if ($result instanceof Expr\FuncCall) {
-					$result .= "\n{{ " . $this->p($node) . " }}";
+            $this->pComments($node->getAttribute('comments', array()));
+			if ($node instanceof Expr) {
+				if ($node instanceof Expr\FuncCall) {
+					$this->indenter->expression( $this->pExpr_FuncCall($node) );
+				} else if ($node instanceof Expr\Assign || $node instanceof Expr\AssignOp) {
+					$this->p( $node );
 				} else {
-					$this->abort("Unsupported", $node);
+					$this->error("Unsupported", $node);
 				}
 			} else {
-				$result .= $this->p($node);
+				$this->p($node);
 			}
-        }
-
-        if ($indent) {
-            return preg_replace('~\n(?!$|' . $this->noIndentToken . ')~', "\n    ", $result);
-        } else {
-            return $result;
         }
     }
 
     public function pStmt_Foreach(Stmt\Foreach_ $node) {
-        return '{% for '
+		$this->indenter->statement('for '
              . (null !== $node->keyVar ? $this->p($node->keyVar) . ' , ' : '')
              . $this->p($node->valueVar) 
-			 . " in ". $this->p($node->expr) . ' %}'
-             . $this->pStmts($node->stmts) . '{% endfor %}';
-    }
-
-    public function pStmt_While(Stmt\While_ $node) {
-		$this->abort("No support", $node);
-        return 'while (' . $this->p($node->cond) . ') {'
-             . $this->pStmts($node->stmts) . "\n" . '}';
-    }
-
-    public function pStmt_Do(Stmt\Do_ $node) {
-		$this->abort("No support", $node);
-        return 'do {' . $this->pStmts($node->stmts) . "\n"
-             . '} while (' . $this->p($node->cond) . ');';
-    }
-
-    public function pStmt_Switch(Stmt\Switch_ $node) {
-		$this->abort("No support", $node);
-        return 'switch (' . $this->p($node->cond) . ') {'
-             . $this->pStmts($node->cases) . "\n" . '}';
-    }
-
-    public function pStmt_Case(Stmt\Case_ $node) {
-		$this->abort("No support", $node);
-        return (null !== $node->cond ? 'case ' . $this->p($node->cond) : 'default') . ':'
-             . $this->pStmts($node->stmts);
-    }
-
-    public function pStmt_TryCatch(Stmt\TryCatch $node) {
-		$this->abort("No support", $node);
-        return 'try {' . $this->pStmts($node->stmts) . "\n" . '}'
-             . $this->pImplode($node->catches)
-             . ($node->finallyStmts !== null
-                ? ' finally {' . $this->pStmts($node->finallyStmts) . "\n" . '}'
-                : '');
-    }
-
-    public function pStmt_Catch(Stmt\Catch_ $node) {
-		$this->abort("No support", $node);
-        return ' catch (' . $this->p($node->type) . ' $' . $node->var . ') {'
-             . $this->pStmts($node->stmts) . "\n" . '}';
-    }
-
-    public function pStmt_Break(Stmt\Break_ $node) {
-		$this->abort("No support", $node);
-        return 'break' . ($node->num !== null ? ' ' . $this->p($node->num) : '') . ';';
-    }
-
-    public function pStmt_Continue(Stmt\Continue_ $node) {
-		$this->abort("No support", $node);
+			 . " in ". $this->p($node->expr)
+		);
+		$this->indenter->indent();
+		$this->pStmts($node->stmts);
+		$this->indenter->unindent();
+		$this->indenter->statement("endfor");
     }
 
     public function pStmt_Return(Stmt\Return_ $node) {
-		return "{{ ".$node->expr . " }}";
-    }
-
-    public function pStmt_Throw(Stmt\Throw_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Label(Stmt\Label $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Goto(Stmt\Goto_ $node) {
-		$this->abort("No support", $node);
+		$this->indenter->expression($this->p($node->expr));
     }
 
     // Other
 
     public function pStmt_Echo(Stmt\Echo_ $node) {
-        return '{{ ' . $this->pImplode($node->exprs, ' ~ ') . ' }}';
-    }
-
-    public function pStmt_Static(Stmt\Static_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Global(Stmt\Global_ $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_StaticVar(Stmt\StaticVar $node) {
-		$this->abort("No support", $node);
-    }
-
-    public function pStmt_Unset(Stmt\Unset_ $node) {
-		$this->abort("No support", $node);
+		$this->indenter->expression($this->pImplode($node->exprs, ' ~ '));
     }
 
     public function pStmt_InlineHTML(Stmt\InlineHTML $node) {
 		$str = str_replace("{{", "{{ '{{' }}", $node->value);
 		$str = str_replace("{%", "{{ '{%' }}", $str);
-        return $this->pNoIndent($str);
-    }
-
-    public function pStmt_HaltCompiler(Stmt\HaltCompiler $node) {
-		$this->abort("No support", $node);
+		$this->indenter->html( $str );
     }
 
     // Helpers
@@ -923,29 +655,12 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         return is_string($node) ? $node : $this->p($node);
     }
 
-    protected function pClassCommon(Stmt\Class_ $node, $afterClassToken) {
-        return $this->pModifiers($node->type)
-        . 'class' . $afterClassToken
-        . (null !== $node->extends ? ' extends ' . $this->p($node->extends) : '')
-        . (!empty($node->implements) ? ' implements ' . $this->pCommaSeparated($node->implements) : '')
-        . "\n" . '{' . $this->pStmts($node->stmts) . "\n" . '}';
-    }
-	
     protected function pObjectProperty($node) {
         if ($node instanceof Expr) {
             return '{' . $this->p($node) . '}';
         } else {
             return $node;
         }
-    }
-
-    protected function pModifiers($modifiers) {
-        return ($modifiers & Stmt\Class_::MODIFIER_PUBLIC    ? 'public '    : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_PROTECTED ? 'protected ' : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_PRIVATE   ? 'private '   : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_STATIC    ? 'static '    : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_ABSTRACT  ? 'abstract '  : '')
-             . ($modifiers & Stmt\Class_::MODIFIER_FINAL     ? 'final '     : '');
     }
 
     protected function pEncapsList(array $encapsList, $quote) {
@@ -985,7 +700,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
         if ($node instanceof Name) {
 			return $this->p($node);
         } else  {
-			$this->abort("Not supported", $node);
+			$this->error("Not supported", $node);
         }
     }
 	
@@ -997,13 +712,14 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
      * @return string Reformatted text of comments
      */
     protected function pComments(array $comments) {
-        $result = '';
-
         foreach ($comments as $comment) {
-			
-            $result .= "{# ".str_replace("#}","", $comment) . " #}";
+        	$this->indenter->comment($comment);
         }
-        return $result;
     }
+
+    public function prettyPrint(array $stmts) {
+		$this->pStmts( $stmts );
+		return $this->indenter->getOutput();
+	}
 }
 

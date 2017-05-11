@@ -18,7 +18,7 @@ class PluginContainer
 		$path=getenv('HOME');
 		if (!empty($path)) {
 			$configPath = $path . DIRECTORY_SEPARATOR . ".twigify-plugins";
-			echo "Plugin path: $configPath\n";
+			echo "Plugin path: $configPath\n\n";
 			if(is_dir( $configPath ) ) {
 				foreach(glob( $configPath . DIRECTORY_SEPARATOR . "*.php") as $pluginFile) {
 					$this->plugins[] = require $pluginFile;

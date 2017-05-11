@@ -29,16 +29,26 @@ $b = implode(str_replace("ing","", "Testing"),[1,2,3]);
 <?= MyClass::MY_CONSTANT ?>
 <?= MyConstant ?>
 
-<html>
-	<head>
-	
+<html> <head>
+		<style>
+			.a { color: red} 
+
+			div { 
+				margin: 5px;
+			}
+		</style>
 	</head>
 	<body>
+		<p>Hi <?=$firstName?> the <?=$lastName?>,</p>
+		<p>This is some sample text.</p>
+
+		
+		<div id="foo" class="<?=$test?>" >Hello</div>
 		<?= __js("TEsting") ?>
 		<? if( !in_array(3, $a) && true || false ) { echo "Testing"; } ?>
 		<?= testing() ?>
 		<?= count($a); ?>
-		<?= he( $a->foo ) ?>
+<?= he( $a->foo ) ?>
 		<?= "Testing" ?>
 	</body>
 </html>

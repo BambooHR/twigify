@@ -53,5 +53,14 @@ catch(ConvertException $e) {
 	echo $e->getMessage()."\n";
 }
 
+
+$errors = $converter->getErrors();
+if (count($errors)>0) {
+	echo "\n\nErrors:\n";
+	foreach ($converter->getErrors() as $error) {
+		echo " - $error\n";
+	}
+}
+
 $plugins->beforeShutdown();
 
