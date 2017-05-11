@@ -31,7 +31,7 @@ $b = implode(str_replace("ing","", "Testing"),[1,2,3]);
 
 <html> <head>
 		<style>
-			.a { color: red} 
+			.a { color: red; } 
 
 			div { 
 				margin: 5px;

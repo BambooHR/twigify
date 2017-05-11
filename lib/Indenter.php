@@ -7,8 +7,8 @@
 namespace BambooHR\Twigify;
 
 class Indenter {
-	const TAB =  "\t";
 	private $indent = 0;
+	private $indentSequence = "\t";
 	private $inTag = false;
 	private $inCloseTag = false;
 
@@ -23,6 +23,10 @@ class Indenter {
 	private $last = self::TYPE_NONE;
 
 	private $output = "";
+
+	function setIndent($str, $count) {
+		$this->indentSequence = str_repeat($str, $count);
+	}
 
 	function indent() {
 		$this->indent++;
@@ -41,7 +45,7 @@ class Indenter {
 	}
 
 	function newLine() {
-		$this->output = rtrim($this->output)."\n". str_repeat(self::TAB, $this->indent);
+		$this->output = rtrim($this->output)."\n". str_repeat($this->indentSequence, $this->indent);
 	}
 
 	function statement($str) {

@@ -23,9 +23,9 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 	private $errors = [];
 	protected $indenter;
 
-	public function __construct(array $options = []) {
+	public function __construct(Indenter $indenter, array $options = []) {
 		parent::__construct($options);
-		$this->indenter=new Indenter();
+		$this->indenter = $indenter;
 	}
 
 
@@ -486,20 +486,15 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 		}
 		$ret.=")";
 		$this->indenter->statement($ret);
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts, true);
 		$this->indenter->statement("endmacro");
-        return $ret;
     }
 
     // Control flow
 
     public function pStmt_If(Stmt\If_ $node) {
 		$this->indenter->statement("if " . $this->p($node->cond));
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts, true);
 		foreach($node->elseifs as $stmt) {
 			$this->p($stmt);
 		}
@@ -511,16 +506,12 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 
     public function pStmt_ElseIf(Stmt\ElseIf_ $node) {
 		$this->indenter->statement('elseif ' . $this->p($node->cond) . ')' );
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts, true);
     }
 
     public function pStmt_Else(Stmt\Else_ $node) {
 		$this->indenter->statement("else");
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts, true);
     }
 
 	private function getForMax(Stmt\For_ $node) {
@@ -598,13 +589,14 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 		$step = $this->getForStep($name, $node);
 
 		$this->indenter->statement("for $loopCounter in range($min, $max, $step)");
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts,true);
 		$this->indenter->statement("endfor");
     }
 	
 	protected function pStmts(array $nodes, $indent = true) {
+		if($indent) {
+			$this->indenter->indent();
+		}
         foreach ($nodes as $node) {
             $this->pComments($node->getAttribute('comments', array()));
 			if ($node instanceof Expr) {
@@ -619,6 +611,9 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
 				$this->p($node);
 			}
         }
+        if($indent) {
+			$this->indenter->unindent();
+		}
     }
 
     public function pStmt_Foreach(Stmt\Foreach_ $node) {
@@ -627,9 +622,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
              . $this->p($node->valueVar) 
 			 . " in ". $this->p($node->expr)
 		);
-		$this->indenter->indent();
-		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
+		$this->pStmts($node->stmts, true);
 		$this->indenter->statement("endfor");
     }
 
@@ -718,7 +711,7 @@ class Converter extends \PhpParser\PrettyPrinter\Standard {
     }
 
     public function prettyPrint(array $stmts) {
-		$this->pStmts( $stmts );
+		$this->pStmts( $stmts, false );
 		return $this->indenter->getOutput();
 	}
 }

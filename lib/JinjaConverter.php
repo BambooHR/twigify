@@ -12,10 +12,8 @@ use PhpParser\Node\Stmt;
 class JinjaConverter extends Converter
 {
 	public function pStmt_ElseIf(Stmt\ElseIf_ $node) {
-		$this->indenter->statement("elif " . $this->p($node->cond) . ')' );
-		$this->indenter->indent();
+		$this->indenter->statement("elif " . $this->p($node->cond) . ')', true );
 		$this->pStmts($node->stmts);
-		$this->indenter->unindent();
 	}
 
 	public function pStmt_Foreach(Stmt\Foreach_ $node) {
@@ -26,9 +24,7 @@ class JinjaConverter extends Converter
 				. $this->p($node->valueVar)
 				. " in " . $this->p($node->expr) . '.iteritems()'
 			);
-			$this->indenter->indent();
-			$this->pStmts($node->stmts);
-			$this->indenter->unindent();
+			$this->pStmts($node->stmts,true);
 			$this->indenter->statement('endfor');
 		} else {
 			$this->indenter->statement(
@@ -36,9 +32,7 @@ class JinjaConverter extends Converter
 				. $this->p($node->valueVar)
 				. " in " . $this->p($node->expr)
 			);
-			$this->indenter->indent();
-			$this->pStmts($node->stmts);
-			$this->indenter->unindent();
+			$this->pStmts($node->stmts,true);
 		}
 	}
 }

@@ -19,11 +19,14 @@ use BambooHR\Twigify\SwitchToIfConverter;
 
 $fileName = "";
 
-$converter = new Converter();
+$indenter = new \BambooHR\Twigify\Indenter();
+$converter = new Converter($indenter);
 for($i=1;$i<count($_SERVER['argv']); ++$i) {
 	$arg = $_SERVER['argv'][$i];
-	if($arg=='-j' || $arg=='jinja') {
-		$converter = new JinjaConverter();
+	if($arg=='-j' || $arg=='--jinja') {
+		$converter = new JinjaConverter($indenter);
+	} else if($arg=='-s' && $i+1 < count($_SERVER['argv'])) {
+		$indenter->setIndent(" ", $_SERVER['argv'][++$i] );
 	} else {
 		$fileName = $arg;
 	}
